@@ -76,7 +76,7 @@ impl Djikstra {
         while self.unsettled_nodes.len() > 0 {
             if let Some(node) = self.get_minimum(&self.unsettled_nodes) {
                 self.settled_nodes.insert(node.clone());
-                self.unsettled_nodes.insert(node.clone());
+                self.unsettled_nodes.remove(&node);
                 self.find_minimal_distance(&node);
             } else {
                 panic!("Error");
@@ -88,7 +88,7 @@ impl Djikstra {
         let adjacent_nodes = self.get_neighbors(node);
         for target in &adjacent_nodes {
             if self.get_shortest_distance(target)
-                > self.get_shortest_distance(target) + self.get_distance(node, target)
+                > self.get_shortest_distance(node) + self.get_distance(node, target)
             {
                 self.distance.insert(
                     target.id.clone(),
@@ -154,10 +154,13 @@ impl Djikstra {
             return vec![];
         } else {
             path.push(step.id.clone());
-            let id = &step.id.clone();
-            while self.predecessors.get(&id.clone()).is_some() {
-                step = self.predecessors.get(&id.clone()).unwrap().clone();
-                path.push(step.id.clone());
+            while self.predecessors.get(&step.id.clone()).is_some() {
+                if let Some(s) = self.predecessors.get(&step.id.clone()) {
+                    step = s.clone();
+                    path.push(step.id.clone());
+                } else {
+                    break;
+                }
             }
         }
 
@@ -187,7 +190,7 @@ mod tests {
         edges.push(e);
     }
     #[test]
-    fn it_works() {
+    fn simple() {
         let mut nodes = vec![];
         let mut edges = vec![];
 
@@ -207,6 +210,36 @@ mod tests {
 
         let start = nodes[0].clone();
         let end = nodes[4].clone();
+        let graph = Graph::new(nodes, edges);
+        let mut djikstra = Djikstra::new(graph);
+        djikstra.run(&start);
+        let path = djikstra.get_path(&end);
+        assert!(path.len() > 0);
+        dbg!(path);
+    }
+    #[test]
+    fn simple2() {
+        let mut nodes = vec![];
+        let mut edges = vec![];
+
+        nodes.push(Vertex::new("A".into(), "A".into()));
+        nodes.push(Vertex::new("B".into(), "B".into()));
+        nodes.push(Vertex::new("C".into(), "C".into()));
+        nodes.push(Vertex::new("D".into(), "D".into()));
+        nodes.push(Vertex::new("E".into(), "E".into()));
+        nodes.push(Vertex::new("F".into(), "F".into()));
+        add_lane(&nodes, &mut edges, "AB".into(), 0, 1, 10);
+        add_lane(&nodes, &mut edges, "AC".into(), 0, 2, 20);
+        add_lane(&nodes, &mut edges, "BD".into(), 1, 3, 50);
+        add_lane(&nodes, &mut edges, "BE".into(), 1, 4, 10);
+        add_lane(&nodes, &mut edges, "CD".into(), 2, 3, 20);
+        add_lane(&nodes, &mut edges, "CE".into(), 2, 4, 33);
+        add_lane(&nodes, &mut edges, "DE".into(), 3, 4, 20);
+        add_lane(&nodes, &mut edges, "DF".into(), 3, 5, 2);
+        add_lane(&nodes, &mut edges, "EF".into(), 4, 5, 1);
+
+        let start = nodes[0].clone();
+        let end = nodes[5].clone();
         let graph = Graph::new(nodes, edges);
         let mut djikstra = Djikstra::new(graph);
         djikstra.run(&start);
